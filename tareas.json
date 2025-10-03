@@ -1,0 +1,26 @@
+[
+  {
+    "descripcion": "comprar mozzarella tomate papel higienico en el dia",
+    "fecha": "2025-09-30",
+    "realizada": true,
+    "id": 4
+  },
+  {
+    "descripcion": "llamar a Mila",
+    "fecha": "2025-10-03",
+    "realizada": true,
+    "id": 7
+  },
+  {
+    "id": 5,
+    "descripcion": "Hacer la base de pizza",
+    "fecha": "2025-09-30",
+    "realizada": true
+  },
+  {
+    "id": 6,
+    "descripcion": "Caminata 20 minutos",
+    "fecha": "2025-09-30",
+    "realizada": true
+  }
+]

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de tareas</title>
+  <style>
+    body { 
+        font-family: sans-serif;
+        }
+    
+    .realizada { 
+        text-decoration: line-through; color: gray; 
+        }
+    
+    .pendiente { 
+        color: darkblue; 
+        font-weight: bold;
+        }
+    
+    li { 
+        margin-bottom: 5px;
+        }
+    
+    button { 
+        margin-left: 10px; 
+        cursor: pointer;
+        }
+   
+    .notificacion.exito {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        }
+
+    .notificacion.error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        }
+    .notificacion {
+        padding: 10px;
+        margin-top: 20px;
+        border-radius: 5px;
+        font-weight: bold;
+        animation: fadeIn 0.5s ease;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+  </style>
+    <!-- Integrar Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+</head>
+<body>
+  <h1>Lista de tareas</h1>
+  <ul id="lista-tareas"></ul>
+
+<!-- formulario para agregar tarea --> 
+  <h2 class="mt-4">Agregar nueva tarea</h2>
+    <form id="formulario" class="border p-4 rounded bg-light">
+      <div class="mb-3">
+        <label for="descripcion" class="form-label">Descripción</label>
+        <input type="text" id="descripcion" class="form-control" placeholder="Descripción" required>
+      </div>
+      <div class="mb-3">
+        <label for="fecha" class="form-label">Fecha</label>
+        <input type="date" id="fecha" class="form-control" required>
+      </div>
+      <div class="mb-3">
+        <label for="prioridad" class="form-label">Prioridad</label>
+          <select id="prioridad" class="form-select">
+            <option value="alta">Alta</option>
+            <option value="media" selected>Media</option>
+            <option value="baja">Baja</option>
+          </select>
+      </div>
+
+<div class="mb-3">
+  <label for="etiquetas" class="form-label">Etiquetas (separadas por coma)</label>
+  <input type="text" id="etiquetas" class="form-control" placeholder="trabajo, urgente">
+</div>
+
+
+      <button type="submit" class="btn btn-success">Agregar</button>
+    </form>
+
+  <h2>Filtrar tareas</h2>
+    <button onclick="cargarTareas()">Todas</button>
+    <button onclick="cargarTareas(false)">Pendientes</button>
+    <button onclick="cargarTareas(true)">Realizadas</button>
+
+  <!-- formulario para edición --> 
+  <div id="form-edicion" class="container mt-4" style="display:none;">
+    <h2 class="mb-3">Editar tarea</h2>
+      <form id="formulario-edicion" class="border p-4 rounded bg-light">
+        <div class="mb-3">
+          <label for="editar-descripcion" class="form-label">Descripción</label>
+          <input type="text" id="editar-descripcion" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label for="editar-fecha" class="form-label">Fecha</label>
+          <input type="date" id="editar-fecha" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary me-2">Guardar cambios</button>
+        <button type="button" class="btn btn-secondary" onclick="cancelarEdicion()">Cancelar</button>
+      </form>
+  </div>
+    
+  <div id="notificacion" class="container" style="display:none;"></div>
+  
+  <script>
+    const lista = document.getElementById('lista-tareas');
+       
+    // Agregar tarea
+    document.getElementById('formulario').addEventListener('submit', e => {
+      e.preventDefault();
+      const tarea = {
+        descripcion: document.getElementById('descripcion').value,
+        fecha: document.getElementById('fecha').value,
+        realizada: false
+      };
+
+      fetch('/tarea', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tarea)
+      })
+      .then(res => res.json())
+      .then(() => {
+        document.getElementById('formulario').reset();
+        mostrarNotificacion('✅ Tarea agregada');
+        cargarTareas();
+       })
+      .catch(() => mostrarNotificacion('❌ Error al agregar tarea', 'error'));
+
+    });
+    // funciones prioridad de tareas
+      const prioridad = document.getElementById('prioridad').value;
+      const etiquetasTexto = document.getElementById('etiquetas').value;
+      const etiquetas = etiquetasTexto.split(',').map(e => e.trim()).filter(e => e);
+
+      const tarea = {
+        descripcion,
+        fecha,
+        realizada: false,
+        prioridad,
+        etiquetas
+      };
+
+    // Eliminar tarea
+    function eliminarTarea(id) {
+      fetch(`/tarea/${id}`, { method: 'DELETE' })
+        .then(() => {
+        mostrarNotificacion('🗑️ Tarea eliminada');
+        cargarTareas();
+        })
+        .catch(() => mostrarNotificacion('❌ Error al eliminar tarea', 'error'));
+    }
+
+    // Marcar como realizada
+    function marcarRealizada(id) {
+      fetch(`/tarea/${id}`, { method: 'PUT' })
+        .then(() => cargarTareas());
+    }
+
+    cargarTareas(); // inicial
+    
+    // Filtrar tareas 
+    function cargarTareas(realizada = null) {
+    let url = '/tarea';
+    if (realizada !== null) {
+        url += `?realizada=${realizada}`;
+    }
+
+    fetch(url)
+        .then(res => res.json())
+        .then(tareas => {
+        lista.innerHTML = '';
+        tareas.forEach(t => {
+            const li = document.createElement('li');
+            li.className = t.realizada ? 'realizada' : 'pendiente';
+            const fechaFormateada = formatearFecha(t.fecha);
+            const badge = obtenerBadgePrioridad(t.prioridad);
+            li.innerHTML = `<strong>${t.descripcion}</strong> <small class="text-muted">(${fechaFormateada})</small> ${badge}`;
+
+            const btnEliminar = document.createElement('button');
+            btnEliminar.textContent = '🗑️';
+            btnEliminar.onclick = () => eliminarTarea(t._id);
+
+            if (!t.realizada) {
+            const btnRealizar = document.createElement('button');
+            btnRealizar.textContent = '✅';
+            btnRealizar.onclick = () => marcarRealizada(t._id);
+            li.appendChild(btnRealizar);
+            }
+            
+            // Botón editar
+            const btnEditar = document.createElement('button');
+            btnEditar.textContent = '✏️';
+            btnEditar.onclick = () => mostrarFormularioEdicion(t);
+            li.appendChild(btnEditar);
+
+            li.appendChild(btnEliminar);
+            lista.appendChild(li);
+        });
+        });
+    }
+    
+    // Editar tareas
+        let tareaEditando = null;
+        
+        function mostrarFormularioEdicion(tarea) {
+            tareaEditando = {
+              _id: tarea._id,
+              descripcion: tarea.descripcion,
+              fecha: tarea.fecha
+            };
+            document.getElementById('editar-descripcion').value = tarea.descripcion;
+            document.getElementById('editar-fecha').value = tarea.fecha;
+            document.getElementById('form-edicion').style.display = 'block';
+            }
+
+    // manejador de formulario
+       document.getElementById('formulario-edicion').addEventListener('submit', e => {
+          e.preventDefault();
+          const descripcion = document.getElementById('editar-descripcion').value.trim();
+          const fecha = document.getElementById('editar-fecha').value;
+
+          if (!descripcion || !fecha) {
+            mostrarNotificacion('⚠️ Todos los campos son obligatorios', 'error');
+            return;
+          }
+
+          fetch(`/tarea/editar/${tareaEditando._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ descripcion, fecha })
+          })
+          .then(res => res.json())
+          .then(() => {
+            tareaEditando = null;
+            document.getElementById('form-edicion').style.display = 'none';
+            mostrarNotificacion('✅ Tarea actualizada');
+            cargarTareas();
+          })
+          .catch(() => mostrarNotificacion('❌ Error al editar tarea', 'error'));
+        });     
+
+    // funcion para cancelar
+      function cancelarEdicion() {
+        tareaEditando = null;
+        document.getElementById('form-edicion').style.display = 'none';
+      }   
+
+    // Funcion mostrar tarea
+      function mostrarNotificacion(mensaje, tipo = 'exito') {
+        const div = document.getElementById('notificacion');
+        div.textContent = mensaje;
+        div.className = `notificacion alert ${tipo === 'error' ? 'alert-danger' : 'alert-success'}`;
+        div.style.display = 'block';
+        setTimeout(() => div.style.display = 'none', 3000);
+      } 
+    // Funcion formatear fecha
+      function formatearFecha(fechaISO) {
+        const fecha = new Date(fechaISO);
+        const dia = String(fecha.getDate()).padStart(2, '0');
+        const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+        const año = fecha.getFullYear();
+        return `${dia}-${mes}-${año}`;
+      }
+      
+    // Función codigo de colores 
+      function obtenerBadgePrioridad(prioridad) {
+        let clase = 'bg-secondary'; // por defecto
+
+        if (prioridad === 'alta') clase = 'bg-danger';
+        else if (prioridad === 'media') clase = 'bg-warning text-dark';
+        else if (prioridad === 'baja') clase = 'bg-success';
+
+        return `<span class="badge ${clase} ms-2">${prioridad}</span>`;
+      }
+  </script>
+</body>
+</html>
