@@ -145,11 +145,13 @@
 
       fetch('/tarea', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json',
-        'x-clave-app': 'clave-super-secreta'
-         },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-clave-app': 'clave-super-secreta'
+        },
         body: JSON.stringify(tarea)
       })
+      
       .then(res => res.json())
       .then(() => {
         document.getElementById('formulario').reset();
@@ -199,7 +201,9 @@
         url += `?realizada=${realizada}`;
     }
 
-    fetch(url, { headers: {'x-clave-app': 'clave-super-secreta'}})
+    fetch(url, { headers: {
+                  'Content-Type': 'application/json',
+                  'x-clave-app': 'clave-super-secreta'}})
         .then(res => res.json())
         .then(tareas => {
         lista.innerHTML = '';
