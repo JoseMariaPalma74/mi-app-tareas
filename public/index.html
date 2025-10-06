@@ -264,7 +264,10 @@
 
           fetch(`/tarea/editar/${tareaEditando._id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-clave-app': 'clave-super-secreta'
+            },
             body: JSON.stringify({ descripcion, fecha })
           })
           .then(res => res.json())
