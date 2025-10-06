@@ -16,6 +16,14 @@ const rutaTarea = require('./routes/tarea');
 
 // Rutas API 
 app.use(express.json());
+// Middleware de protección básica
+app.use((req, res, next) => {
+  const clave = req.headers['x-clave-app'];
+  if (process.env.APP_SECRET && clave !== process.env.APP_SECRET) {
+    return res.status(403).json({ error: 'Acceso no autorizado' });
+  }
+  next();
+});
 // Middleware para servir archivos estáticos
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/tarea', rutaTarea); 
